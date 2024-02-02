@@ -1,56 +1,73 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+import requests
+import json
 
 G = nx.Graph()
 
 
-Dépôt = [(0, {"nom": "SOGARIS", "pos": (2.36815, 48.74991)})]
-Destinataires = [
+Lieux = [
+    (0, {"nom": "SOGARIS", "pos": (2.36815, 48.74991)}),
     (1, {"nom": "Mines Paris", "pos": (2.33969, 48.84563)}),
     (2, {"nom": "Observatoire de Paris", "pos": (2.33650, 48.83730)}),
     (3, {"nom": "Marie du 14e", "pos": (2.32698, 48.83320)}),
     (4, {"nom": "Gare Montparnasse TGV", "pos": (2.32159, 48.84117)}),
     (5, {"nom": "Mairie du 15e", "pos": (2.29991, 48.84126)}),
 ]
-G.add_nodes_from(Dépôt)
-print(G)
-G.add_nodes_from(Destinataires)
-print(G)
+G.add_nodes_from(Lieux)
 
-
-def distance_cartesienne(x1, x2, y1, y2):
-    return np.sqrt(np.square(x1 - x2) + np.square(y1 - y2))
+F = [elmt[1]["pos"] for elmt in Lieux]
+L = []
+T = {}
+for l in range(len(G)):
+    for k in range(l, len(G)):
+        if l != k:
+            try:
+                r = requests.get(
+                    f"https://wxs.ign.fr/essentiels/geoportail/itineraire/rest/1.0.0/route?resource=bdtopo-osrm&start={F[l][0]},{F[l][1]}&end={F[k][0]},{F[k][1]}"
+                ).json()
+                # print(f"Distance : {r['distance']} mètres, Durée :{r['duration']} minutes")
+            except Exception:
+                print(f"erreur requete !")
+                print(k, l)
+            L.append((l, k, r["distance"]))
+            T[(l, k)] = r["duration"]
 
 
 # print(G.)
-xsource, ysource = G.nodes[0]["pos"]
 
+G.add_weighted_edges_from(L)
 for i in range(len(G.nodes) - 1):
-    xi, yi = G.nodes[i]["pos"]
     for j in range(i + 1, len(G.nodes)):
-        x, y = G.nodes[j]["pos"]
-        G.add_edge(i, j, weight=distance_cartesienne(xi, x, yi, x))
+        G[i][j]["durée"] = T[(i, j)]
 
 
-G.add_nodes_from(Dépôt)
-print(G)
-G.add_nodes_from(Destinataires)
-print(G)
-
+"""
 pos = nx.spring_layout(G, weight="weight")
-
 subax1 = plt.subplot(121)
 nx.draw(G, with_labels=True, font_weight="bold")
 subax2 = plt.subplot(122)
 nx.draw_shell(G, nlist=[range(5, 10), range(5)], with_labels=True, font_weight="bold")
 plt.show()
+"""
 
 tsp = nx.approximation.traveling_salesman_problem
-chemin = tsp(G, weight="weight", nodes=None, cycle=True, method=None)
+chemin_dist_min = tsp(G, weight="weight", nodes=None, cycle=True, method=None)
 distance_tot = 0
-for i in range(len(chemin) - 1):
-    edge_data = G.get_edge_data(chemin[i], chemin[i + 1])
-    print(edge_data)
+for i in range(len(chemin_dist_min) - 1):
+    edge_data = G.get_edge_data(chemin_dist_min[i], chemin_dist_min[i + 1])
     distance_tot += edge_data["weight"]
-print(chemin, distance_tot)
+
+chemin_geo_dist_min = [Lieux[element][1]["nom"] for element in chemin_dist_min]
+print(f"Le chemin le plus cpurt est {chemin_geo_dist_min} et fait {distance_tot}mètres")
+
+
+chemin_tps_min = tsp(G, weight="durée", nodes=None, cycle=True, method=None)
+tps_tot = 0
+for i in range(len(chemin_tps_min) - 1):
+    edge_data = G.get_edge_data(chemin_tps_min[i], chemin_tps_min[i + 1])
+    tps_tot += edge_data["durée"]
+
+chemin_geo_tps_min = [Lieux[element][1]["nom"] for element in chemin_tps_min]
+print(f"Le chemin le plus rapide est {chemin_geo_tps_min} et fait {tps_tot} minutes")
