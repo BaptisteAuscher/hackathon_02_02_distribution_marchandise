@@ -4,6 +4,8 @@ import numpy as np
 import requests
 import json
 
+#Récupérer l'ordre le plus court
+
 G = nx.Graph()
 
 
@@ -43,16 +45,9 @@ for i in range(len(G.nodes) - 1):
         G[i][j]["durée"] = T[(i, j)]
 
 
-"""
-pos = nx.spring_layout(G, weight="weight")
-subax1 = plt.subplot(121)
-nx.draw(G, with_labels=True, font_weight="bold")
-subax2 = plt.subplot(122)
-nx.draw_shell(G, nlist=[range(5, 10), range(5)], with_labels=True, font_weight="bold")
-plt.show()
-"""
 
 tsp = nx.approximation.traveling_salesman_problem
+"""
 chemin_dist_min = tsp(G, weight="weight", nodes=None, cycle=True, method=None)
 distance_tot = 0
 for i in range(len(chemin_dist_min) - 1):
@@ -61,7 +56,7 @@ for i in range(len(chemin_dist_min) - 1):
 
 chemin_geo_dist_min = [Lieux[element][1]["nom"] for element in chemin_dist_min]
 print(f"Le chemin le plus cpurt est {chemin_geo_dist_min} et fait {distance_tot}mètres")
-
+"""
 
 chemin_tps_min = tsp(G, weight="durée", nodes=None, cycle=True, method=None)
 tps_tot = 0
@@ -69,5 +64,8 @@ for i in range(len(chemin_tps_min) - 1):
     edge_data = G.get_edge_data(chemin_tps_min[i], chemin_tps_min[i + 1])
     tps_tot += edge_data["durée"]
 
+print(chemin_tps_min)
 chemin_geo_tps_min = [Lieux[element][1]["nom"] for element in chemin_tps_min]
 print(f"Le chemin le plus rapide est {chemin_geo_tps_min} et fait {tps_tot} minutes")
+
+
